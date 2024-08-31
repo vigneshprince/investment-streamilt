@@ -5,7 +5,6 @@ import streamlit_antd_components as sac
 import firebase_admin
 from firebase_admin import credentials,firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
-from streamlit_date_picker import date_picker, PickerType
 
 import random
 import datetime
