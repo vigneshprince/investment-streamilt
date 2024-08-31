@@ -1,0 +1,2 @@
+streamlit-antd-components
+streamlit-pdf-viewer

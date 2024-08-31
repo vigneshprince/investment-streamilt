@@ -1,0 +1,9 @@
+# Ignore virtual environment
+myenv/
+
+# Ignore other files and directories
+*.pyc
+*.log
+node_modules/
+
+.streamlit
