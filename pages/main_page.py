@@ -14,9 +14,6 @@ from dateutil.relativedelta import relativedelta
 import streamlit as st
 from streamlit_google_auth_handler import Authenticate
 
-def header(url):
-     st.markdown(f'<p style="background-color:#0066cc;color:#33ff33;font-size:24px;border-radius:2%;">{url}</p>', unsafe_allow_html=True)
-     
 cola,colb=st.columns([1,1],vertical_alignment="bottom")
 cola.header("Investment Tracker")
 if colb.button("Logout"):
