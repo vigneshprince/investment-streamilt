@@ -1,3 +1,8 @@
 streamlit-antd-components
 streamlit-pdf-viewer
 firebase-admin
+streamlit-free-text-select
+extra_streamlit_components
+pyjwt
+google-auth-oauthlib
+google-api-python-client
