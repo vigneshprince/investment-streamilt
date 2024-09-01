@@ -13,7 +13,8 @@ authenticator = Authenticate(
     },
     cookie_name='streamlit_auth',
     cookie_key='streamlit_auth_keys',
-    redirect_uri='http://localhost:8501/',
+    # redirect_uri='http://localhost:8501/',
+    redirect_uri='https://vigneshprince-investment-streamilt-streamlit-app-bb937a.streamlit.app/',
 )
 
 authenticator.check_authentification()
