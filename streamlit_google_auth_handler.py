@@ -7,7 +7,7 @@ import streamlit as st
 from typing import Literal
 import google_auth_oauthlib.flow
 from googleapiclient.discovery import build
-
+from firebase_admin import firestore
 from cookie import CookieHandler
 
 class Authenticate:
@@ -66,36 +66,38 @@ class Authenticate:
                     'picture': token['picture'],
                     'id': token['oauth_id']
                 }
+                
+
                 st.query_params.clear()
                 st.session_state["connected"] = True
                 st.session_state["user_info"] = user_info
                 st.session_state["oauth_id"] = user_info.get("id")
                 return
             
-            time.sleep(0.3)
-            
-            if not st.session_state['connected']:
-                auth_code = st.query_params.get("code")
-                st.query_params.clear()
-                if auth_code:
-                    flow = google_auth_oauthlib.flow.Flow.from_client_config(
-                        self.secret_credentials_path, # replace with you json credentials from your google auth app
-                        scopes=["openid","https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email"],
-                        redirect_uri=self.redirect_uri,
-                    )
-                    flow.fetch_token(code=auth_code)
-                    credentials = flow.credentials
-                    user_info_service = build(
-                        serviceName="oauth2",
-                        version="v2",
-                        credentials=credentials,
-                    )
-                    user_info = user_info_service.userinfo().get().execute()
-
-                    st.session_state["connected"] = True
-                    st.session_state["oauth_id"] = user_info.get("id")
-                    st.session_state["user_info"] = user_info
-                    self.cookie_handler.set_cookie(user_info.get("name"), user_info.get("email"), user_info.get("picture"), user_info.get("id"))
+            auth_code = st.query_params.get("code")
+            st.query_params.clear()
+            if auth_code:
+                flow = google_auth_oauthlib.flow.Flow.from_client_config(
+                    self.secret_credentials_path, # replace with you json credentials from your google auth app
+                    scopes=["openid","https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email"],
+                    redirect_uri=self.redirect_uri,
+                )
+                flow.fetch_token(code=auth_code)
+                credentials = flow.credentials
+                user_info_service = build(
+                    serviceName="oauth2",
+                    version="v2",
+                    credentials=credentials,
+                )
+                user_info = user_info_service.userinfo().get().execute()
+                collection= firestore.client().collection("users")
+                user_info=list(collection.where('email', "==", user_info.get("email")).stream())
+                if not user_info:
+                    return
+                st.session_state["connected"] = True
+                st.session_state["oauth_id"] = user_info.get("id")
+                st.session_state["user_info"] = user_info
+                self.cookie_handler.set_cookie(user_info.get("name"), user_info.get("email"), user_info.get("picture"), user_info.get("id"))
     
     def logout(self):
         st.session_state['logout'] = True
