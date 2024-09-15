@@ -56,7 +56,7 @@ class Authenticate:
 
             st.markdown(html_content, unsafe_allow_html=True)
 
-    def check_authentification(self):
+    def check_authentication(self):
         if not st.session_state['connected']:
             token = self.cookie_handler.get_cookie()
             if token:
@@ -73,7 +73,7 @@ class Authenticate:
                 st.session_state["user_info"] = user_info
                 st.session_state["oauth_id"] = user_info.get("id")
                 return
-            
+            time.sleep(0.3)
             auth_code = st.query_params.get("code")
             st.query_params.clear()
             if auth_code:
@@ -91,13 +91,14 @@ class Authenticate:
                 )
                 user_info = user_info_service.userinfo().get().execute()
                 collection= firestore.client().collection("users")
-                user_info=list(collection.where('email', "==", user_info.get("email")).stream())
-                if not user_info:
+                db_user_info=list(collection.where('email', "==", user_info.get("email")).stream())
+                if not db_user_info:
                     return
                 st.session_state["connected"] = True
                 st.session_state["oauth_id"] = user_info.get("id")
                 st.session_state["user_info"] = user_info
                 self.cookie_handler.set_cookie(user_info.get("name"), user_info.get("email"), user_info.get("picture"), user_info.get("id"))
+                
     
     def logout(self):
         st.session_state['logout'] = True
