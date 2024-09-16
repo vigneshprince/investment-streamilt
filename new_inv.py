@@ -6,25 +6,32 @@ import streamlit as st
 from streamlit_free_text_select import st_free_text_select
 from dateutil.relativedelta import relativedelta
 from utils import *
+from streamlit_extras.stodo import to_do
 
-def upload_to_firebase():
+def upload_to_firebase(firebase_id):
+
+    if st.session_state['inv_amount_ip'] < 10 :
+        st.error("Invalid investment amount")
+        return
+    
     inv_docs=[]
+    for i,d in enumerate(st.session_state['docs']):
+        if not st.session_state[f'docs_{i}']:
+            inv_docs.append(d)
+    
     for file_obj in st.session_state['files_ip']:
         blob_name=file_obj.name
         if bucket.blob(blob_name).exists():
             random_string = ''.join(random.choices(string.ascii_lowercase, k=4))
             name,ext=get_filename_and_extension(blob_name)
-            blob_name = f"{name}_{random_string}.{ext}"
+            blob_name = f"{name}_{random_string}{ext}"
 
         blob = bucket.blob(blob_name) # Use the original file path as the blob name
         blob.upload_from_string(
             file_obj.read(),
             content_type=file_obj.type)
         inv_docs.append(blob_name)
-
-    if st.session_state['inv_amount_ip'] < 10 :
-        st.error("Invalid investment amount")
-        collection.document().set({
+    to_set={
         "investment_id":st.session_state["inv_id_ip"],
         "investment_name":st.session_state["inv_name_ip"],
         "type":st.session_state["type_ip"],
@@ -36,8 +43,18 @@ def upload_to_firebase():
         "percent_return": st.session_state['percent_ip'],
         "notes":st.session_state["notes_ip"],
         "docs":inv_docs,
-        "closed":False
-    })
+        "Close":False,
+        "Select":False,
+        "Edit":False
+
+    }
+    if firebase_id:
+        collection.document(firebase_id).update(to_set)
+    else:
+        collection.document().set(to_set)
+    get_firebase_data.clear()
+    filter_investments.clear()
+    st.rerun()
         
 def change_maturity_date():
     if st.session_state['yrs_ip']!="Inf":
@@ -53,9 +70,22 @@ def calculate_cumulative_interest_helper():
         st.session_state['inv_date_ip'],
         st.session_state['freq_ip'],
         st.session_state['type_ip'])
+
+@st.dialog(title="Do you wish to close this investment")
+def close_inv(firebase_id):
+    _, coly, _ = st.columns([5,3,5])
+
+    if coly.button('Close'):
+        collection.document(firebase_id).update({'Close':True})
+        get_firebase_data.clear()
+        filter_investments.clear()
+        st.rerun()
     
+    st.dataframe(st.session_state["close_inv"].set_index(st.session_state["close_inv"].columns[0]),use_container_width=True)
+
+
 @st.dialog("Add / Edit Investment")
-def add_inv(inv_names,type_idx,person_idx,edit=False):
+def add_inv(inv_names,type_idx,person_idx,firebase_id=""):
     
     sac.segmented(
     key="type_ip",
@@ -113,6 +143,11 @@ def add_inv(inv_names,type_idx,person_idx,edit=False):
 
     st.text_area("Additional notes",key="notes_ip")
 
+    for i,f in enumerate(st.session_state["docs"]):
+        to_do(
+            [(st.write, f)],
+            f"docs_{i}",
+        )
     st.file_uploader(
         "Upload investment proofs",type=["pdf","jpeg","png","jpg"] ,accept_multiple_files=True,
         key="files_ip",
@@ -120,6 +155,5 @@ def add_inv(inv_names,type_idx,person_idx,edit=False):
     )
     _, coly, _ = st.columns([5,3,5])
 
-    coly.button('Submit' if not edit else 'Update',on_click=upload_to_firebase)
-
-
+    if coly.button('Submit' if not firebase_id else 'Update'):
+        upload_to_firebase(firebase_id)

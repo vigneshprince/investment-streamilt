@@ -1,22 +1,25 @@
 from datetime import datetime,date,timedelta
-import os
+import urllib.parse
 import string
 import pandas as pd
 import streamlit as st
 import streamlit_antd_components as sac
-from google.cloud.firestore_v1.base_query import FieldFilter
 import random
 import json
 from dateutil.relativedelta import relativedelta
 import streamlit as st
-from streamlit_google_auth_handler import Authenticate
-import numpy as np
 from utils import *
 from consts import *
-from new_inv import add_inv
+from new_inv import add_inv,close_inv
 
 # if not st.session_state.get('connected',False):
 #     st.switch_page('pages/auth.py')
+@st.dialog("Camera")
+def picture_upload():
+    picture = st.camera_input("Take a picture")
+    
+if st.button("Camera"):
+    picture_upload()
 
 cola,colb=st.columns([1,1],vertical_alignment="bottom")
 cola.header("Investment Tracker")
@@ -25,25 +28,6 @@ if colb.button("Logout"):
     
     get_auth_obj().logout()
     st.switch_page('pages/auth.py')
-
-
-def calculate_cumulative_interest_1(r,till_date):
-    till_date=min(datetime.combine(till_date, datetime.min.time()) ,r['maturity_date'])
-    if r['type']=='FD':
-        principal, rate, time, n =  r['investment_value'], r['percent_return']/100, till_date.year - r['invest_date'].year,1
-        return int(principal * (1 + (rate / n)) ** (n * time))
-    else:
-        principal, rate, n =  r['investment_value'], r['percent_return']/100 ,RD_options[r['freq']]
-        rate_div=rate/n
-        total_frequency=get_duration(r['invest_date'],till_date,r['freq'])
-
-        return principal * (((1 + rate_div) ** total_frequency - 1) / rate_div) * (1 + rate_div)
-
-
-def curr_invest_value(r,till_date):
-    till_date=min(datetime.combine(till_date, datetime.min.time()),r['maturity_date'])
-    total_frequency=get_duration(r['invest_date'],till_date,r['freq'])
-    return r['investment_value'] * total_frequency
 
 
 @st.cache_data
@@ -83,73 +67,21 @@ def generate_random_investment_data(num_records=20):
 
     return df
 
-inv_data = generate_random_investment_data()
-def process_dates(data):
-    for k,v in data.items():
-        if isinstance(v, datetime):
-            data[k]=v.date()
-    return data
 
-@st.cache_data
-def get_firebase_data():
-    data=[]
-    for doc in collection.stream():
-        data.append(process_dates(doc.to_dict()))
-    return data
-    
 
 @st.cache_data
 def get_inv_names():
     return list(set(inv_data['investment_name']))
 
 
-
-@st.cache_data
-def filter_investments(tgl_button, year,month, srch_txt ):
-    filtered_df=inv_data.copy(deep=True)
-
-    end_date=date.today()
-
-    
-    if tgl_button:
-        date_col="maturity_date"
-        if year and month:
-            end_date=date(year,month,30)
-        elif year:
-            end_date=date(year,12,31)
-    else:
-        date_col="invest_date"
-    
-    filtered_df['maturity_value'] = np.where(filtered_df['maturity_date'].dt.year== 2099,\
-                                              filtered_df.apply(lambda r:calculate_cumulative_interest_1(r,end_date), axis=1),\
-                                                filtered_df['maturity_value'])
-    
-    filtered_df['investment_value'] =np.where(filtered_df['type'] == "RD", filtered_df.apply(lambda r:curr_invest_value(r,end_date),axis=1),filtered_df['investment_value'])
-
-    if srch_txt:
-        filtered_df = filtered_df[filtered_df['investment_name'].str.lower().str.contains(srch_txt)]
-
-    if date_col=="maturity_date":
-        common_data=filtered_df[filtered_df[date_col].dt.year==2099].copy(deep=True)
-
-    if year:
-        filtered_df = filtered_df[filtered_df[date_col].dt.year == year]
-    if month:
-        filtered_df = filtered_df[filtered_df[date_col].dt.month == months.index(month)]
-    if date_col=="maturity_date":
-        return pd.concat([filtered_df,common_data])
-    return filtered_df
-
-
+inv_data = get_firebase_data()
 inv_names= get_inv_names()
-
-
-# json_data = get_firebase_data()
 
 def clear_Text():
     st.session_state.srch=""
     st.session_state.yearsel=None
     st.session_state.monthsel=""
+    st.session_state["selected_person"]="All"
 
 def toggler():
     st.session_state['toggle_button']=not st.session_state['toggle_button']
@@ -163,10 +95,10 @@ with col2:
     st.button("Clear :material/clear:",on_click=clear_Text)
 
 
-selected=sac.chip(
+sac.chip(
             items=[
                 sac.ChipItem(label=x) for x in ["All"]+people
-            ], label='', index=[0], align='center', radius='md', multiple=False
+            ], label='', index=[0], align='center', radius='md', multiple=False,key="selected_person"
         )
 
 def change_maturity_date():
@@ -205,7 +137,9 @@ with col6:
             "yrs_ip":5,
             "inv_amount_ip":5000,
             "mat_amount_ip":0,
-            "notes_ip":""
+            "notes_ip":"",
+            "firebase_id":"",
+            "docs":[]
         }
         for k in existing_data:
             st.session_state[k] = existing_data[k]
@@ -213,17 +147,25 @@ with col6:
 
 
 
-inv_data_filtered = filter_investments(st.session_state["toggle_button"] , st.session_state["yearsel"], st.session_state["monthsel"],st.session_state["srch"])
+inv_data_filtered = filter_investments(st.session_state["toggle_button"] , st.session_state["yearsel"], st.session_state["monthsel"],st.session_state["srch"],st.session_state['selected_person'])
 inv_data_filtered['test_col']=random.randint(1,1000)
-inv_data_filtered['Edit']=False
-inv_data_filtered['Close']=False
-inv_data_filtered['Select']=False
-inv_data_filtered.insert(0, 'Select', inv_data_filtered.pop('Select'))
 
-def df_button():
+@st.dialog(title="More Info")
+def add_info(docs):
+    for d in docs:
+        st.link_button(urllib.parse.unquote(d), bucket.blob(d).generate_signed_url(
+        version="v4",
+        expiration=timedelta(minutes=30),  # or a datetime.timedelta object
+        method="GET",
+    ))
+
+    st.dataframe(st.session_state["add_info"].set_index(st.session_state["add_info"].columns[0]),use_container_width=True)
+
+
+
+if 'deditor' in st.session_state:
     for k,v in st.session_state['deditor']['edited_rows'].items():
         for k1 in v:
-            print(k1)
             if k1=="Edit":
                 existing_data={
                 "type_ip":inv_data_filtered['type'].iloc[k],
@@ -237,20 +179,25 @@ def df_button():
                 "yrs_ip":5,
                 "inv_amount_ip":inv_data_filtered['investment_value'].iloc[k],
                 "mat_amount_ip":inv_data_filtered['maturity_value'].iloc[k],
-                "notes_ip":inv_data_filtered['notes'].iloc[k]
+                "notes_ip":inv_data_filtered['notes'].iloc[k],
+                "docs":inv_data_filtered['docs'].iloc[k],
                 }
+                firebase_id=inv_data_filtered['id'].iloc[k]
                 for k in existing_data:
                     st.session_state[k] = existing_data[k]
-                add_inv(inv_names,types_data.index(st.session_state['type_ip']),people.index(st.session_state['person_ip']),True)
+                add_inv(inv_names,types_data.index(st.session_state['type_ip']),people.index(st.session_state['person_ip']),firebase_id)
 
             elif k1=="Select":
-                st.session_state["add_info_notes"]=inv_data_filtered['notes'].iloc[k]
-                st.session_state["add_info_freq"]=inv_data_filtered['freq'].iloc[k]
-                st.session_state["add_info_type"]=inv_data_filtered['type'].iloc[k]
-                st.session_state["add_info_percent_return"]=inv_data_filtered['percent_return'].iloc[k]
-                st.session_state["add_info_investment_id"]=inv_data_filtered['investment_id'].iloc[k]
+                docs=inv_data_filtered['docs'].iloc[k]
+                st.session_state["add_info"]= pd.DataFrame(list(inv_data_filtered[['type', 'person', 'investment_id', 'investment_name', 'invest_date', 'maturity_date', 'freq', 'percent_return', 'investment_value', 'maturity_value', 'notes',]].iloc[k].items()), columns=['Category', 'Value'])
+                add_info(docs)
+            
+            elif k1=="Close":
+                st.session_state["close_inv"]= pd.DataFrame(list(inv_data_filtered[['person', 'investment_id', 'investment_name', 'invest_date', 'maturity_date', 'investment_value', 'maturity_value']].iloc[k].items()), columns=['Category', 'Value'])
+                close_inv(inv_data_filtered['id'].iloc[k])
 
-    
+
+
 st.data_editor(inv_data_filtered,use_container_width=True,hide_index=True,
              column_config={
         "test_col":None,
@@ -259,9 +206,18 @@ st.data_editor(inv_data_filtered,use_container_width=True,hide_index=True,
         "type":None,
         "percent_return":None,
         "notes":None,
-
+        "docs":None,
+        "invest_date": st.column_config.DateColumn(
+            format="DD/MM/YYYY",
+            step=1,
+        ),
+        "maturity_date": st.column_config.DateColumn(
+            format="DD/MM/YYYY",
+            step=1,
+        ),
+        "id":None
     },
     key="deditor",
-    on_change=df_button
              )
+
 

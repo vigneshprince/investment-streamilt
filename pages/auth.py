@@ -3,7 +3,6 @@ from utils import get_auth_obj
 
 authenticator=get_auth_obj()
 authenticator.check_authentication()
-print('asd')
 if not st.session_state['connected']:
     authenticator.login()
 else:

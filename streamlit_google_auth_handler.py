@@ -11,7 +11,7 @@ from firebase_admin import firestore
 from cookie import CookieHandler
 
 class Authenticate:
-    def __init__(self, secret_credentials_path:str, redirect_uri: str, cookie_name: str, cookie_key: str, cookie_expiry_days: float=30.0):
+    def __init__(self, secret_credentials_path:str, redirect_uri: str, cookie_name: str, cookie_key: str, cookie_expiry_days: float=100.0):
         st.session_state['connected']   =   st.session_state.get('connected', False) 
         self.secret_credentials_path    =   secret_credentials_path
         self.redirect_uri               =   redirect_uri
