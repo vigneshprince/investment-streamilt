@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from io import BytesIO
 import random
 import string
 import streamlit_antd_components as sac
@@ -7,6 +8,22 @@ from streamlit_free_text_select import st_free_text_select
 from dateutil.relativedelta import relativedelta
 from utils import *
 from streamlit_extras.stodo import to_do
+from streamlit_back_camera_input import back_camera_input
+
+def remove_ip():
+    if st.session_state['camera_ip']:
+        st.session_state['camera_ip'].pop()
+
+def picture_upload():
+    cam_ip=back_camera_input()
+    cam_ip_read=cam_ip.read() if cam_ip else None
+    if cam_ip and st.session_state['previous_ip']!=cam_ip_read:
+        st.session_state['camera_ip'].append(cam_ip)
+    st.session_state['previous_ip']=cam_ip_read
+    st.button(':wastebasket:',on_click=remove_ip)
+    print('render',random.randint(0,100),len(st.session_state['camera_ip']))
+    st.image([x for x in st.session_state['camera_ip'] if x],width=100)
+    if st.session_state['camera_ip']:st.image(st.session_state['camera_ip'][-1])
 
 def upload_to_firebase(firebase_id):
 
@@ -18,7 +35,11 @@ def upload_to_firebase(firebase_id):
     for i,d in enumerate(st.session_state['docs']):
         if not st.session_state[f'docs_{i}']:
             inv_docs.append(d)
-    
+    for i,file_obj in enumerate(st.session_state['camera_ip']):
+        random_string = "rand"+''.join(random.choices(string.ascii_lowercase, k=5))+f'_file{i}.jpg'
+        bucket.blob(random_string).upload_from_string(file_obj.read(), content_type='image/jpeg')
+        inv_docs.append(random_string)
+
     for file_obj in st.session_state['files_ip']:
         blob_name=file_obj.name
         if bucket.blob(blob_name).exists():
@@ -154,6 +175,9 @@ def add_inv(inv_names,type_idx,person_idx,firebase_id=""):
 
     )
     _, coly, _ = st.columns([5,3,5])
+
+    if st.toggle("Use Camera",key="camera_toggle"):
+        picture_upload()
 
     if coly.button('Submit' if not firebase_id else 'Update'):
         upload_to_firebase(firebase_id)

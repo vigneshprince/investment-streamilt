@@ -1,4 +1,5 @@
 from datetime import datetime,date,timedelta
+import locale
 import urllib.parse
 import string
 import pandas as pd
@@ -8,33 +9,31 @@ import random
 import json
 from dateutil.relativedelta import relativedelta
 import streamlit as st
+from streamlit_extras.card import card
 from utils import *
 from consts import *
 from new_inv import add_inv,close_inv
-from streamlit_back_camera_input import back_camera_input
-
+locale.setlocale(locale.LC_ALL, 'en_US')
 # if not st.session_state.get('connected',False):
 #     st.switch_page('pages/auth.py')
-li=[]
-def remove_ip():
-    if li:li.pop()
-
-@st.dialog("Camera")
-def picture_upload():
-    cam_ip=back_camera_input()
-    if cam_ip and not (st.session_state.get("remove_ip") and st.session_state.get("enlarge")):
-        li.append(cam_ip)
-    st.image([x for x in li if x],width=100)
-    cola,colb=st.columns([1,1],vertical_alignment="bottom")
-    cola.button(':wastebasket:',key="remove_ip",on_click=remove_ip)
-    if colb.button('Enlarge',key="enlarge") and li:
-        st.image(li[-1])
-
-if st.button("Camera"):
-    picture_upload()
-
-cola,colb=st.columns([1,1],vertical_alignment="bottom")
-cola.header("Investment Tracker")
+# card(
+#         title="Investment Amount",
+#         text="Some description",
+#         styles={
+#         "card": {
+            
+#         },
+#         "text": {
+#             "fontSize": "15px",
+#         }
+#         ,
+#         "title": {
+#             "fontSize": "10px",
+#         }
+#         }
+# )
+cola,colb=st.columns([1,1],vertical_alignment="bottom",gap="small")
+cola.header("Investment Tracker",divider=True)
 
 if colb.button("Logout"):
     
@@ -151,7 +150,9 @@ with col6:
             "mat_amount_ip":0,
             "notes_ip":"",
             "firebase_id":"",
-            "docs":[]
+            "docs":[],
+            "camera_ip":[],
+            "camera_toggle":False
         }
         for k in existing_data:
             st.session_state[k] = existing_data[k]
@@ -197,6 +198,9 @@ if 'deditor' in st.session_state:
                 firebase_id=inv_data_filtered['id'].iloc[k]
                 for k in existing_data:
                     st.session_state[k] = existing_data[k]
+                st.session_state['camera_ip']=[]
+                st.session_state['camera_toggle']=False
+                
                 add_inv(inv_names,types_data.index(st.session_state['type_ip']),people.index(st.session_state['person_ip']),firebase_id)
 
             elif k1=="Select":
@@ -209,6 +213,10 @@ if 'deditor' in st.session_state:
                 close_inv(inv_data_filtered['id'].iloc[k])
 
 
+
+col1, col2= st.columns(2,gap="small")
+col1.container(border=True).metric("Investment Amount", locale.format_string("%d", inv_data_filtered['investment_value'].sum(), grouping=True))
+col2.container(border=True).metric("Maturity Amount", locale.format_string("%d",inv_data_filtered['maturity_value'].sum(), grouping=True))
 
 st.data_editor(inv_data_filtered,use_container_width=True,hide_index=True,
              column_config={
