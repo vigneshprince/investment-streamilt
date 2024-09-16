@@ -11,13 +11,25 @@ import streamlit as st
 from utils import *
 from consts import *
 from new_inv import add_inv,close_inv
+from streamlit_back_camera_input import back_camera_input
 
 # if not st.session_state.get('connected',False):
 #     st.switch_page('pages/auth.py')
+li=[]
+def remove_ip():
+    if li:li.pop()
+
 @st.dialog("Camera")
 def picture_upload():
-    picture = st.camera_input("Take a picture")
-    
+    cam_ip=back_camera_input()
+    if cam_ip and not (st.session_state.get("remove_ip") and st.session_state.get("enlarge")):
+        li.append(cam_ip)
+    st.image([x for x in li if x],width=100)
+    cola,colb=st.columns([1,1],vertical_alignment="bottom")
+    cola.button(':wastebasket:',key="remove_ip",on_click=remove_ip)
+    if colb.button('Enlarge',key="enlarge") and li:
+        st.image(li[-1])
+
 if st.button("Camera"):
     picture_upload()
 
