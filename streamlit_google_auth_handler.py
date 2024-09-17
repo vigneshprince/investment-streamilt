@@ -1,7 +1,6 @@
 # Thanks mkhorasani for his authentification package that I used to build this 
 # https://github.com/mkhorasani/Streamlit-Authenticator
-
-import os
+from google.cloud.firestore_v1.base_query import FieldFilter
 import time
 import streamlit as st
 from typing import Literal
@@ -73,10 +72,11 @@ class Authenticate:
                 st.session_state["user_info"] = user_info
                 st.session_state["oauth_id"] = user_info.get("id")
                 return
-            time.sleep(0.3)
+            time.sleep(2)
             auth_code = st.query_params.get("code")
             st.query_params.clear()
             if auth_code:
+                print(auth_code)
                 flow = google_auth_oauthlib.flow.Flow.from_client_config(
                     self.secret_credentials_path, # replace with you json credentials from your google auth app
                     scopes=["openid","https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email"],
@@ -91,14 +91,14 @@ class Authenticate:
                 )
                 user_info = user_info_service.userinfo().get().execute()
                 collection= firestore.client().collection("users")
-                db_user_info=list(collection.where('email', "==", user_info.get("email")).stream())
+                db_user_info=list(collection.where(FieldFilter('email', "==", user_info.get("email"))).stream())
                 if not db_user_info:
                     return
                 st.session_state["connected"] = True
                 st.session_state["oauth_id"] = user_info.get("id")
                 st.session_state["user_info"] = user_info
                 self.cookie_handler.set_cookie(user_info.get("name"), user_info.get("email"), user_info.get("picture"), user_info.get("id"))
-                
+                time.sleep(2)
     
     def logout(self):
         st.session_state['logout'] = True

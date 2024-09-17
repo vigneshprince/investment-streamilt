@@ -37,17 +37,17 @@ def upload_to_firebase(firebase_id):
             inv_docs.append(d)
     for i,file_obj in enumerate(st.session_state['camera_ip']):
         random_string = "rand"+''.join(random.choices(string.ascii_lowercase, k=5))+f'_file{i}.jpg'
-        bucket.blob(random_string).upload_from_string(file_obj.read(), content_type='image/jpeg')
+        storage.bucket().blob(random_string).upload_from_string(file_obj.read(), content_type='image/jpeg')
         inv_docs.append(random_string)
 
     for file_obj in st.session_state['files_ip']:
         blob_name=file_obj.name
-        if bucket.blob(blob_name).exists():
+        if storage.bucket().blob(blob_name).exists():
             random_string = ''.join(random.choices(string.ascii_lowercase, k=4))
             name,ext=get_filename_and_extension(blob_name)
             blob_name = f"{name}_{random_string}{ext}"
 
-        blob = bucket.blob(blob_name) # Use the original file path as the blob name
+        blob = storage.bucket().blob(blob_name) # Use the original file path as the blob name
         blob.upload_from_string(
             file_obj.read(),
             content_type=file_obj.type)
@@ -70,9 +70,9 @@ def upload_to_firebase(firebase_id):
 
     }
     if firebase_id:
-        collection.document(firebase_id).update(to_set)
+        firestore.client().collection("investments").document(firebase_id).update(to_set)
     else:
-        collection.document().set(to_set)
+        firestore.client().collection("investments").document().set(to_set)
     get_firebase_data.clear()
     filter_investments.clear()
     st.rerun()
@@ -97,7 +97,7 @@ def close_inv(firebase_id):
     _, coly, _ = st.columns([5,3,5])
 
     if coly.button('Close'):
-        collection.document(firebase_id).update({'Close':True})
+        firestore.client().collection("investments").document(firebase_id).update({'Close':True})
         get_firebase_data.clear()
         filter_investments.clear()
         st.rerun()

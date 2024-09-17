@@ -1,3 +1,4 @@
+import calendar
 import os
 from google.cloud.firestore_v1.base_query import FieldFilter
 from datetime import datetime,date
@@ -9,8 +10,9 @@ from streamlit_google_auth_handler import Authenticate
 from consts import *
 import pandas as pd
 
-
 def curr_invest_value(r,till_date):
+    if r['type']=='FD':
+        return r['investment_value']
     till_date=min(datetime.combine(till_date, datetime.min.time()),r['maturity_date'])
     total_frequency=get_duration(r['invest_date'],till_date,r['freq'])
     return r['investment_value'] * total_frequency
@@ -64,7 +66,7 @@ def calculate_cumulative_interest_1(r,till_date):
 @st.cache_data
 def get_firebase_data():
     data=[]
-    for doc in collection.where(filter=FieldFilter("Close", "==", False)).stream():
+    for doc in firestore.client().collection("investments").where(filter=FieldFilter("Close", "==", False)).stream():
         doc_dict=doc.to_dict()
         doc_dict['id']=doc.id
         data.append(doc_dict)
@@ -74,42 +76,33 @@ def get_firebase_data():
     return data[['Select','investment_name','invest_date', 'maturity_date','investment_value','maturity_value', 'person', 'Edit','Close','investment_id', 'docs', 'type'
        , 'percent_return', 'freq','notes','id']]
 
+def last_date():
+    current_date = date.today()
+    year = current_date.year
+    month = current_date.month
+    return date(year, month, calendar.monthrange(year, month)[1])
+
 @st.cache_data
-def filter_investments(tgl_button, year,month, srch_txt,filter_person):
+def filter_investments(inv_filter, year,month, srch_txt,filter_person):
     filtered_df=get_firebase_data().copy(deep=True)
-    
-    if tgl_button:
-        date_col="maturity_date"
-        if year and month:
-            end_date=date(year,month,30)
-        elif year:
-            end_date=date(year,12,31)
-        else:
-            end_date=date.today()
+    end_date=last_date()
+
+    filtered_df['maturity_value'] = filtered_df.apply(lambda r:calculate_cumulative_interest_1(r,end_date), axis=1)                                     
+    if inv_filter=="Default":
+        filtered_df['investment_value'] =filtered_df.apply(lambda r:curr_invest_value(r,end_date), axis=1)                            
 
     else:
-        date_col="invest_date"
-        end_date=date.today()
+        date_col="maturity_date" if inv_filter=="Maturity" else "invest_date"
+        filtered_df = filtered_df[filtered_df[date_col].dt.year == year]
+        if month: 
+            filtered_df = filtered_df[filtered_df[date_col].dt.month == months.index(month)]
 
     
-    filtered_df['maturity_value'] = filtered_df.apply(lambda r:calculate_cumulative_interest_1(r,end_date), axis=1)                                     
-
-    if not (year and month) or date_col=="maturity_date":
-        filtered_df['investment_value'] =np.where(filtered_df['type'] == "RD", filtered_df.apply(lambda r:curr_invest_value(r,end_date),axis=1),filtered_df['investment_value'])
-
     if srch_txt:
         filtered_df = filtered_df[filtered_df['investment_name'].str.lower().str.contains(srch_txt)]
     if filter_person!="All":
         filtered_df = filtered_df[filtered_df['person']==filter_person]
-    if date_col=="maturity_date":
-        common_data=filtered_df[filtered_df[date_col].dt.year==2099].copy(deep=True)
-
-    if year:
-        filtered_df = filtered_df[filtered_df[date_col].dt.year == year]
-    if month:
-        filtered_df = filtered_df[filtered_df[date_col].dt.month == months.index(month)]
-    if date_col=="maturity_date":
-        return pd.concat([filtered_df,common_data])
+  
     return filtered_df
 
 
@@ -126,4 +119,4 @@ def get_duration(start_date, end_date, unit):
     elif unit == 'Daily':
         return (end_date - start_date).days
     
-collection, bucket = firestore.client().collection("investments"), storage.bucket()
+

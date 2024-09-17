@@ -10,3 +10,4 @@ months = ["","January", "February", "March", "April", "May", "June", "July", "Au
 people=["Vignesh","Maheswari","Ravikumar","Shivani"]
 yrs_options=["Inf"]+list(range(1,15))
 types_data=["FD","RD"]
+inv_filter_ways=["Default","Investment","Maturity"]

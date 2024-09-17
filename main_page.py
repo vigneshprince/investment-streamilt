@@ -9,13 +9,12 @@ import random
 import json
 from dateutil.relativedelta import relativedelta
 import streamlit as st
-from streamlit_extras.card import card
 from utils import *
 from consts import *
 from new_inv import add_inv,close_inv
 locale.setlocale(locale.LC_ALL, 'en_US')
-# if not st.session_state.get('connected',False):
-#     st.switch_page('pages/auth.py')
+if not st.session_state.get('connected',False):
+    st.switch_page('auth.py')
 # card(
 #         title="Investment Amount",
 #         text="Some description",
@@ -38,7 +37,7 @@ cola.header("Investment Tracker",divider=True)
 if colb.button("Logout"):
     
     get_auth_obj().logout()
-    st.switch_page('pages/auth.py')
+    st.switch_page('auth.py')
 
 
 @st.cache_data
@@ -88,14 +87,17 @@ def get_inv_names():
 inv_data = get_firebase_data()
 inv_names= get_inv_names()
 
+if "yearsel" not in st.session_state:st.session_state.yearsel=2024
+if "monthsel" not in st.session_state:st.session_state.monthsel="September"
+
 def clear_Text():
     st.session_state.srch=""
-    st.session_state.yearsel=None
-    st.session_state.monthsel=""
+    st.session_state.yearsel=2024
+    st.session_state.monthsel="September"
     st.session_state["selected_person"]="All"
 
-def toggler():
-    st.session_state['toggle_button']=not st.session_state['toggle_button']
+# def toggler():
+#     st.session_state['toggle_button']=not st.session_state['toggle_button']
 
 col1, col2 = st.columns([2,2],vertical_alignment="bottom")
 
@@ -112,25 +114,20 @@ sac.chip(
             ], label='', index=[0], align='center', radius='md', multiple=False,key="selected_person"
         )
 
-def change_maturity_date():
-    if st.session_state['yrs_inp']!="Inf":
-        st.session_state['mat_date_inp']=st.session_state['inv_date_inp'] + relativedelta(years=st.session_state['yrs_inp'])
-    else:
-        st.session_state['mat_date_inp']=date(2099,1,1)
-
 
 col3, col4, col5,col6 = st.columns([1,1,1,1],vertical_alignment="bottom")
 with col3:
-    if "toggle_button" not in st.session_state:
-        st.session_state["toggle_button"] = False
+    st.selectbox("Filter By",inv_filter_ways,key="inv_filter_ways",index=0)
+    # if "toggle_button" not in st.session_state:
+    #     st.session_state["toggle_button"] = False
 
-    if st.session_state["toggle_button"]:
-        st.button('Mat Date :material/Anchor:',on_click=toggler)
-    else:
-        st.button('Inv Date :material/Anchor:',on_click=toggler)
+    # if st.session_state["toggle_button"]:
+    #     st.button('Mat Date :material/Anchor:',on_click=toggler)
+    # else:
+    #     st.button('Inv Date :material/Anchor:',on_click=toggler)
 
 with col4:
-    st.number_input("Year",value=None,step=1,key="yearsel")
+    st.number_input("Year",step=1,key="yearsel")
 with col5:
     st.selectbox("Month",months,key="monthsel")
 
@@ -160,13 +157,13 @@ with col6:
 
 
 
-inv_data_filtered = filter_investments(st.session_state["toggle_button"] , st.session_state["yearsel"], st.session_state["monthsel"],st.session_state["srch"],st.session_state['selected_person'])
+inv_data_filtered = filter_investments(st.session_state["inv_filter_ways"] , st.session_state["yearsel"], st.session_state["monthsel"],st.session_state["srch"],st.session_state['selected_person'])
 inv_data_filtered['test_col']=random.randint(1,1000)
 
 @st.dialog(title="More Info")
 def add_info(docs):
     for d in docs:
-        st.link_button(urllib.parse.unquote(d), bucket.blob(d).generate_signed_url(
+        st.link_button(urllib.parse.unquote(d), storage.bucket().blob(d).generate_signed_url(
         version="v4",
         expiration=timedelta(minutes=30),  # or a datetime.timedelta object
         method="GET",
