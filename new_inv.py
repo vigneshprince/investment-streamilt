@@ -73,8 +73,7 @@ def upload_to_firebase(firebase_id):
         firestore.client().collection("investments").document(firebase_id).update(to_set)
     else:
         firestore.client().collection("investments").document().set(to_set)
-    get_firebase_data.clear()
-    filter_investments.clear()
+    refresh_data()
     st.rerun()
         
 def change_maturity_date():
@@ -98,8 +97,7 @@ def close_inv(firebase_id):
 
     if coly.button('Close'):
         firestore.client().collection("investments").document(firebase_id).update({'Close':True})
-        get_firebase_data.clear()
-        filter_investments.clear()
+        refresh_data()
         st.rerun()
     
     st.dataframe(st.session_state["close_inv"].set_index(st.session_state["close_inv"].columns[0]),use_container_width=True)

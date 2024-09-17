@@ -10,11 +10,25 @@ from streamlit_google_auth_handler import Authenticate
 from consts import *
 import pandas as pd
 
+def formatINR(number):
+    neg = False
+    if number < 0:
+        neg = True
+    number = abs(number)
+    s, *d = str(number).partition(".")
+    r = ",".join([s[x-2:x] for x in range(-3, -len(s), -2)][::-1] + [s[-3:]])
+    r = "-"+r if neg else r
+    return "".join([r] + d)
+
+def refresh_data():
+    get_firebase_data.clear()
+    filter_investments.clear()
+
 def curr_invest_value(r,till_date):
     if r['type']=='FD':
         return r['investment_value']
     till_date=min(datetime.combine(till_date, datetime.min.time()),r['maturity_date'])
-    total_frequency=get_duration(r['invest_date'],till_date,r['freq'])
+    total_frequency=get_duration(r['invest_date'],till_date,r['freq'])+1
     return r['investment_value'] * total_frequency
 
 
@@ -99,7 +113,7 @@ def filter_investments(inv_filter, year,month, srch_txt,filter_person):
 
     
     if srch_txt:
-        filtered_df = filtered_df[filtered_df['investment_name'].str.lower().str.contains(srch_txt)]
+        filtered_df = filtered_df[filtered_df['investment_name'].str.lower().str.contains(srch_txt.lower())]
     if filter_person!="All":
         filtered_df = filtered_df[filtered_df['person']==filter_person]
   

@@ -1,18 +1,15 @@
 from datetime import datetime,date,timedelta
-import locale
 import urllib.parse
 import string
 import pandas as pd
 import streamlit as st
 import streamlit_antd_components as sac
 import random
-import json
 from dateutil.relativedelta import relativedelta
 import streamlit as st
 from utils import *
 from consts import *
 from new_inv import add_inv,close_inv
-locale.setlocale(locale.LC_ALL, 'en_US')
 if not st.session_state.get('connected',False):
     st.switch_page('auth.py')
 # card(
@@ -99,14 +96,17 @@ def clear_Text():
 # def toggler():
 #     st.session_state['toggle_button']=not st.session_state['toggle_button']
 
-col1, col2 = st.columns([2,2],vertical_alignment="bottom")
+
+
+col1, col2=st.columns([2,1],vertical_alignment="center",gap="small")
 
 with col1:
     st.text_input(label="Filter",placeholder="Search",key="srch")
-
 with col2:
-    st.button("Clear :material/clear:",on_click=clear_Text)
-
+    cont=col2.container()
+    cont.button("Clear :material/clear:",on_click=clear_Text)
+    cont.button('Refresh :material/Refresh:',on_click=refresh_data)
+        
 
 sac.chip(
             items=[
@@ -211,9 +211,10 @@ if 'deditor' in st.session_state:
 
 
 
-col1, col2= st.columns(2,gap="small")
-col1.container(border=True).metric("Investment Amount", locale.format_string("%d", inv_data_filtered['investment_value'].sum(), grouping=True))
-col2.container(border=True).metric("Maturity Amount", locale.format_string("%d",inv_data_filtered['maturity_value'].sum(), grouping=True))
+col1, col2,col3= st.columns(3,gap="small")
+col1.container(border=True).metric("Investment Amount", formatINR( inv_data_filtered['investment_value'].sum()))
+col2.container(border=True).metric("Maturity Amount", formatINR(inv_data_filtered['maturity_value'].sum()))
+col3.container(border=True).metric("Count", len(inv_data_filtered))
 
 st.data_editor(inv_data_filtered,use_container_width=True,hide_index=True,
              column_config={
