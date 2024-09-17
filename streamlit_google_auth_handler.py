@@ -76,7 +76,6 @@ class Authenticate:
             auth_code = st.query_params.get("code")
             st.query_params.clear()
             if auth_code:
-                print(auth_code)
                 flow = google_auth_oauthlib.flow.Flow.from_client_config(
                     self.secret_credentials_path, # replace with you json credentials from your google auth app
                     scopes=["openid","https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/userinfo.email"],
