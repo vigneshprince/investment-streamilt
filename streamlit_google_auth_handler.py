@@ -91,7 +91,7 @@ class Authenticate:
                 )
                 user_info = user_info_service.userinfo().get().execute()
                 collection= firestore.client().collection("users")
-                db_user_info=list(collection.where(FieldFilter('email', "==", user_info.get("email"))).stream())
+                db_user_info=list(collection.where(filter=FieldFilter('email', "==", user_info.get("email"))).stream())
                 if not db_user_info:
                     return
                 st.session_state["connected"] = True
