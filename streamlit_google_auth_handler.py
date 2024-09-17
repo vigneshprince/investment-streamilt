@@ -105,3 +105,4 @@ class Authenticate:
         st.session_state['username'] = None
         st.session_state['connected'] = None
         self.cookie_handler.delete_cookie()
+        time.sleep(2)
