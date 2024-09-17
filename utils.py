@@ -44,7 +44,7 @@ def get_auth_obj():
     },
     cookie_name='streamlit_auth',
     cookie_key='streamlit_auth_keys',
-    redirect_uri=st.secrets['redirect_uri'],
+    redirect_uri=st.secrets['redirect_uri']
 )
 
 def get_filename_and_extension(file_path):
