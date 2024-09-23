@@ -12,6 +12,7 @@ from consts import *
 from new_inv import add_inv,close_inv
 if not st.session_state.get('connected',False):
     st.switch_page('auth.py')
+
 # card(
 #         title="Investment Amount",
 #         text="Some description",

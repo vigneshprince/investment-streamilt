@@ -85,7 +85,9 @@ def calculate_cumulative_interest_1(r,till_date):
 @st.cache_data
 def get_firebase_data():
     data=[]
-    for doc in firestore.client().collection("investments").where(filter=FieldFilter("Close", "==", False)).stream():
+    for doc in firestore.client().collection("investments").\
+        where(filter=FieldFilter("Close", "==", False)).\
+            order_by('invest_date', direction=firestore.Query.DESCENDING).stream():
         doc_dict=doc.to_dict()
         doc_dict['id']=doc.id
         data.append(doc_dict)

@@ -2,6 +2,7 @@ from datetime import date, datetime
 from io import BytesIO
 import random
 import string
+import time
 import streamlit_antd_components as sac
 import streamlit as st
 from streamlit_free_text_select import st_free_text_select
@@ -24,12 +25,7 @@ def picture_upload():
     st.image([x for x in st.session_state['camera_ip'] if x],width=100)
     if st.session_state['camera_ip']:st.image(st.session_state['camera_ip'][-1])
 
-def upload_to_firebase(firebase_id):
-
-    if st.session_state['inv_amount_ip'] < 10 :
-        st.error("Invalid investment amount")
-        return
-    
+def upload_to_firebase(firebase_id,coly):
     inv_docs=[]
     for i,d in enumerate(st.session_state['docs']):
         if not st.session_state[f'docs_{i}']:
@@ -68,7 +64,7 @@ def upload_to_firebase(firebase_id):
         "Edit":False
 
     }
-    with st.spinner(text="Uploading..."):
+    with coly,st.spinner('.....'):
         if firebase_id:
             firestore.client().collection("investments").document(firebase_id).update(to_set)
         else:
@@ -173,9 +169,8 @@ def add_inv(inv_names,type_idx,person_idx,firebase_id=""):
 
     )
     _, coly, _ = st.columns([5,3,5])
-
+    coly=coly.empty()
     if st.toggle("Use Camera",key="camera_toggle"):
         picture_upload()
-
     if coly.button('Submit' if not firebase_id else 'Update'):
-        upload_to_firebase(firebase_id)
+        upload_to_firebase(firebase_id,coly)
