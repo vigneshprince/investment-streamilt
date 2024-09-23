@@ -59,7 +59,7 @@ def upload_to_firebase(firebase_id):
         "investment_value": st.session_state['inv_amount_ip'],
         "maturity_value":st.session_state['mat_amount_ip'],
         "invest_date":datetime.combine(st.session_state['inv_date_ip'] , datetime.min.time()),
-        "matrurity_date":datetime.combine(st.session_state['inv_date_ip'] , datetime.min.time()),
+        "maturity_date":datetime.combine(st.session_state['mat_date_ip'] , datetime.min.time()),
         "percent_return": st.session_state['percent_ip'],
         "notes":st.session_state["notes_ip"],
         "docs":inv_docs,
@@ -68,12 +68,13 @@ def upload_to_firebase(firebase_id):
         "Edit":False
 
     }
-    if firebase_id:
-        firestore.client().collection("investments").document(firebase_id).update(to_set)
-    else:
-        firestore.client().collection("investments").document().set(to_set)
-    refresh_data()
-    st.rerun()
+    with st.spinner(text="Uploading..."):
+        if firebase_id:
+            firestore.client().collection("investments").document(firebase_id).update(to_set)
+        else:
+            firestore.client().collection("investments").document().set(to_set)
+        refresh_data()
+        st.rerun()
         
 def change_maturity_date():
     if st.session_state['yrs_ip']!="Inf":
