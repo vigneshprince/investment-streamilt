@@ -21,7 +21,6 @@ def picture_upload():
         st.session_state['camera_ip'].append(cam_ip)
     st.session_state['previous_ip']=cam_ip_read
     st.button(':wastebasket:',on_click=remove_ip)
-    print('render',random.randint(0,100),len(st.session_state['camera_ip']))
     st.image([x for x in st.session_state['camera_ip'] if x],width=100)
     if st.session_state['camera_ip']:st.image(st.session_state['camera_ip'][-1])
 
@@ -156,7 +155,7 @@ def add_inv(inv_names,type_idx,person_idx,firebase_id=""):
     if "percent_ip" not in st.session_state:
             st.session_state["percent_ip"] = 8
 
-    col9.number_input("Percent",step=1,key="percent_ip")
+    col9.number_input("Percent",step=0.5,key="percent_ip")
     col10.number_input("Maturity Amount",step=500,key="mat_amount_ip")
     col11.button("CP interest",on_click=calculate_cumulative_interest_helper)
 

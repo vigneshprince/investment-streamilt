@@ -75,12 +75,6 @@ def generate_random_investment_data(num_records=20):
     return df
 
 
-
-@st.cache_data
-def get_inv_names():
-    return list(set(inv_data['investment_name']))
-
-
 inv_data = get_firebase_data()
 inv_names= get_inv_names()
 

@@ -20,9 +20,15 @@ def formatINR(number):
     r = "-"+r if neg else r
     return "".join([r] + d)
 
+@st.cache_data
+def get_inv_names():
+    return list(set(get_firebase_data()['investment_name']))
+
+
 def refresh_data():
     get_firebase_data.clear()
     filter_investments.clear()
+    get_inv_names.clear()
 
 def curr_invest_value(r,till_date):
     if r['type']=='FD':
